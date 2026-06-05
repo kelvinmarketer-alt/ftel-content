@@ -1,0 +1,36 @@
+name: Publish SEO posts
+
+on:
+  schedule:
+    - cron: "0 1 * * *"   # 08:00 giờ VN (UTC+7) mỗi ngày
+  workflow_dispatch:        # cho phép chạy tay từ tab Actions
+
+permissions:
+  contents: write           # để commit ngược post_id/status
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Publish ready posts
+        env:
+          WP_URL: ${{ secrets.WP_URL }}
+          WP_USER: ${{ secrets.WP_USER }}
+          WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
+        run: python scripts/publish.py
+
+      - name: Commit published state
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add content/posts
+          git diff --cached --quiet || git commit -m "chore: publish posts [skip ci]"
+          git push
